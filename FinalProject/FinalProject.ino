@@ -1,8 +1,8 @@
 // Sharp IR GP2Y0A41SK0F Distance Test
 // http://tinkcore.com/sharp-ir-gp2y0a41-skf/
 
-#define sensorFront A3 // Sharp IR GP2Y0A41SK0F (4-30cm, analog)
-#define sensorRight A0
+#define sensorLeft A3 // Sharp IR GP2Y0A41SK0F (4-30cm, analog)
+
  
  
  #define pwmA    3
@@ -11,13 +11,14 @@
  #define dirB    13
 
  #define ForwardPin 7
-  #define BackwardPin 6
-   #define RightPin 5
-    #define LeftPin 4
+ #define BackwardPin 6
+ #define RightPin 5
+ #define LeftPin 4
+ #define turnPower 65
     
 
- const int rightLimit = 15;
- const int frontLimit = 15;
+ const int Limit = 30;
+ bool CanGoForward = true;
 
 void setup() {
   Serial.begin(9600); // start the serial port
@@ -31,69 +32,90 @@ void setup() {
   pinMode(RightPin, INPUT);
   pinMode(LeftPin, INPUT);
 
-  digitalWrite(ForwardPin, LOW);
-  digitalWrite(BackwardPin, LOW);
-  digitalWrite(RightPin, LOW);
-  digitalWrite(LeftPin, LOW);
-     
-
-
 }
 
 void loop() {
 
-  float voltsFront = analogRead(sensorFront)*0.0048828125;  // value from sensor * (5/1024)
-  float distanceFront = 13*pow(voltsFront, -1); // worked out from datasheet graph
-  float voltsRight = analogRead(sensorRight)*0.0048828125;  // value from sensor * (5/1024)
-  float distanceRight = 13*pow(voltsRight, -1); // worked out from datasheet graph
-  delay(100); // slow down serial port 
-  Serial.println(distanceFront);   // print the distance
-  delay(1000);
-    
-    
+  
+  float voltsFront = analogRead(sensorLeft)*0.0048828125;  // value from sensor * (5/1024)
+  float distanceLeft = 13*pow(voltsFront, -1); // worked out from datasheet graph
 
-  if(digitalRead(RightPin) == HIGH){
+  if (distanceLeft <= Limit){
+    CanGoForward = false;
+  }
+  else{
+    CanGoForward = true;
+    }
+  Serial.print("LEFT SENSOR");
+  Serial.println(distanceLeft);
+  
+  
+ 
+ Serial.print("RIGHT");
+ Serial.println(digitalRead(RightPin));
+  Serial.print("LEFT");
+ Serial.println(digitalRead(LeftPin));
+   Serial.print("FORWARD");
+ Serial.println(digitalRead(ForwardPin));
+   Serial.print("BACK");
+ Serial.println(digitalRead(BackwardPin));
+  delay(1000);
+  Serial.println();
+  
+  if(digitalRead(RightPin) == 1){
     Right();
   }
-  if(digitalRead(LeftPin) == HIGH){
+  else if(digitalRead(LeftPin) == 1){
     Left();
   }
-  if(digitalRead(ForwardPin) == HIGH){
-    Forward();
+  else if (digitalRead(LeftPin) == 0 || digitalRead(RightPin) == 0){
+    StopAmotor();
   }
-    if(digitalRead(BackwardPin) == HIGH){
+  
+  
+  if(digitalRead(ForwardPin) == 1){
+    Forward(CanGoForward);
+  }
+  else if(digitalRead(BackwardPin) == 1){
     Backward();
+  }
+  else if (digitalRead(BackwardPin) == 0 || digitalRead(ForwardPin) == 0){
+    StopBmotor();
   }
 
  
 }
 
 
-void Forward(){
+void Forward(bool can){
+   if(can){
    Bmotor(100);
-   delay(10);
-   Bmotor(0);
+   }
+   else{
+    Bmotor(0);
+    }
 }
 
 void Backward(){
    Bmotor(-100);
-   delay(10);
-   Bmotor(0);
+}
+void StopBmotor(){
+    Bmotor(0);
+  }
+void Left(){
+   Amotor(-turnPower);
+   delay(250);
+   Amotor(0); 
 }
 
-void Left(){
-   Amotor(100);
-   delay(10);
-   Amotor(0);
-  
-  }
-
 void Right(){
-   Amotor(100);
-   delay(10);
+   Amotor(turnPower);  
+   delay(250);
    Amotor(0);
-  
-  }
+   }
+void StopAmotor(){
+  Amotor(0);
+}
 
 
 void Amotor(int pwm){
